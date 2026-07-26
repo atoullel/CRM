@@ -43,7 +43,6 @@ model Contact {
   telephone      String?
   dateJoined     DateTime? @map("date_joined") @db.Date
   score          Int?
-  customFields   Json      @default("{}") @map("custom_fields")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
