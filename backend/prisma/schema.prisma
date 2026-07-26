@@ -17,4 +17,71 @@ enum ColumnType {
   NUMBER
   DATE
   PHONE
+
+  @@map("column_type")
+}
+
+model Organization {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  contacts  Contact[]
+  columns   Column[]
+
+  @@index([deletedAt])
+  @@map("organizations")
+}
+
+model Contact {
+  id             Int       @id @default(autoincrement())
+  organizationId Int?      @map("organization_id")
+  nom            String
+  entreprise     String?
+  telephone      String?
+  dateJoined     DateTime? @map("date_joined") @db.Date
+  score          Int?
+  customFields   Json      @default("{}") @map("custom_fields")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  organization Organization?   @relation(fields: [organizationId], references: [id])
+  values       ContactValue[]
+
+  @@index([deletedAt])
+  @@map("contacts")
+}
+
+model Column {
+  id             Int        @id @default(autoincrement())
+  organizationId Int?       @map("organization_id")
+  name           String
+  type           ColumnType
+  position       Int
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  deletedAt      DateTime?  @map("deleted_at")
+
+  organization Organization?   @relation(fields: [organizationId], references: [id])
+  values       ContactValue[]
+
+  @@index([deletedAt])
+  @@map("columns")
+}
+
+model ContactValue {
+  id        Int    @id @default(autoincrement())
+  value     String
+  contactId Int    @map("contact_id")
+  columnId  Int    @map("column_id")
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  column  Column  @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, columnId])
+  @@index([columnId, value])
+  @@map("contact_values")
 }
