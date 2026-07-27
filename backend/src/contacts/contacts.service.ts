@@ -150,7 +150,7 @@ export class ContactsService {
       ),
     ]);
 
-    return this.findOne(id);
+    return this.formatContact(await this.findOne(id));
   }
 
   async remove(id: number) {
@@ -188,5 +188,25 @@ export class ContactsService {
     }
 
     return parsed;
+  }
+
+  private formatContact(contact: any) {
+    const dynamicValues = contact.values.reduce(
+      (acc, item) => {
+        acc[item.columnId] = item.value;
+
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+    return {
+      id: contact.id,
+      nom: contact.nom,
+      entreprise: contact.entreprise,
+      telephone: contact.telephone,
+      dateJoined: contact.dateJoined,
+      score: contact.score,
+      dynamicValues,
+    };
   }
 }
