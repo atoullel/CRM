@@ -1,58 +1,22 @@
-import {
-  useColumns,
-} from './features/columns/hooks/useColumns';
-
-import {
-  useContacts,
-} from './features/contacts/hooks/useContacts';
-
-import {
-  ContactsTable,
-} from './features/contacts/components/ContactsTable';
-
+import { useColumns } from './features/columns/hooks/useColumns';
+import { useContacts } from './features/contacts/hooks/useContacts';
+import { ContactsTable } from './features/contacts/components/ContactsTable';
 
 function App() {
+  const { columns, loading: columnsLoading } = useColumns();
+  const { contacts, loading: contactsLoading } = useContacts();
 
-  const {
-    columns,
-    loading: columnsLoading,
-  } = useColumns();
-
-
-  const {
-    contacts,
-    loading: contactsLoading,
-  } = useContacts();
-
-
-  if (
-    columnsLoading ||
-    contactsLoading
-  ) {
-    return (
-      <div>
-        Loading...
-      </div>
-    );
+  if (columnsLoading || contactsLoading) {
+    return <div>Loading...</div>;
   }
-
 
   return (
     <div>
+      <h1>CRM</h1>
 
-      <h1>
-        CRM
-      </h1>
-
-
-      <ContactsTable
-        columns={columns}
-        contacts={contacts}
-      />
-
+      <ContactsTable columns={columns} contacts={contacts} />
     </div>
   );
 }
-
 
 export default App;

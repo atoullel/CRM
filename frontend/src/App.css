@@ -9,7 +9,6 @@ table {
   border-collapse: collapse;
 }
 
-
 th,
 td {
   border: 1px solid #ddd;
@@ -17,12 +16,14 @@ td {
   text-align: left;
 }
 
-
 th {
   background: #f5f5f5;
 }
 
-
 tbody tr:hover {
   background: #fafafa;
+}
+
+tr.saving {
+  opacity: 0.6;
 }

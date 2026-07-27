@@ -6,69 +6,54 @@ interface Props {
   contact: Contact;
   columns: Column[];
   onUpdate(id: number, data: Partial<Contact>): void;
+  saving?: boolean;
 }
 
-export function TableRow({ contact, columns, onUpdate }: Props) {
+function toIsoDateInput(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(0, 10);
+}
+
+function toDisplayDate(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString();
+}
+
+export function TableRow({ contact, columns, onUpdate, saving }: Props) {
   return (
-    <tr>
+    <tr className={saving ? 'saving' : ''}>
       <EditableCell
         value={contact.nom}
-        onSave={(value) =>
-          onUpdate(contact.id, {
-            nom: value,
-          })
-        }
+        onSave={(value) => onUpdate(contact.id, { nom: value })}
       />
-
       <EditableCell
         value={contact.entreprise}
-        onSave={(value) =>
-          onUpdate(contact.id, {
-            entreprise: value,
-          })
-        }
+        onSave={(value) => onUpdate(contact.id, { entreprise: value })}
       />
-
       <EditableCell
         value={contact.telephone}
-        onSave={(value) =>
-          onUpdate(contact.id, {
-            telephone: value,
-          })
-        }
+        onSave={(value) => onUpdate(contact.id, { telephone: value })}
       />
-
       <EditableCell
-        value={
-          contact.dateJoined
-            ? new Date(contact.dateJoined).toLocaleDateString()
-            : ''
-        }
-        onSave={(value) =>
-          onUpdate(contact.id, {
-            dateJoined: value,
-          })
-        }
+        value={toIsoDateInput(contact.dateJoined)}
+        displayValue={toDisplayDate(contact.dateJoined)}
+        onSave={(value) => onUpdate(contact.id, { dateJoined: value })}
       />
-
       <EditableCell
         value={contact.score}
-        onSave={(value) =>
-          onUpdate(contact.id, {
-            score: Number(value),
-          })
-        }
+        onSave={(value) => onUpdate(contact.id, { score: Number(value) })}
       />
-
       {columns.map((column) => (
         <EditableCell
           key={column.id}
-          value={contact.dynamicValues[column.id]}
+          value={contact.dynamicValues?.[column.id]}
           onSave={(value) =>
             onUpdate(contact.id, {
-              dynamicValues: {
-                [column.id]: value,
-              },
+              dynamicValues: { [column.id]: value },
             })
           }
         />

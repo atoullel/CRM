@@ -3,11 +3,18 @@ import { useState } from 'react';
 interface Props {
   value: string | number | null | undefined;
   onSave(value: string): void;
+  displayValue?: string | number | null | undefined;
 }
 
-export function EditableCell({ value, onSave }: Props) {
+export function EditableCell({ value, onSave, displayValue }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value?.toString() ?? '');
+  const [syncedValue, setSyncedValue] = useState(value);
+
+  if (!editing && value !== syncedValue) {
+    setSyncedValue(value);
+    setDraft(value?.toString() ?? '');
+  }
 
   function save() {
     setEditing(false);
@@ -35,5 +42,5 @@ export function EditableCell({ value, onSave }: Props) {
     );
   }
 
-  return <td onDoubleClick={() => setEditing(true)}>{value}</td>;
+  return <td onDoubleClick={() => setEditing(true)}>{displayValue ?? value}</td>;
 }
