@@ -1,11 +1,55 @@
-import "./App.css";
+import {
+  useColumns,
+} from './features/columns/hooks/useColumns';
+
+import {
+  useContacts,
+} from './features/contacts/hooks/useContacts';
+
 
 function App() {
+
+  const {
+    columns,
+    loading: columnsLoading,
+  } = useColumns();
+
+
+  const {
+    contacts,
+    loading: contactsLoading,
+  } = useContacts();
+
+
+  if (
+    columnsLoading ||
+    contactsLoading
+  ) {
+    return <div>Loading...</div>;
+  }
+
+
   return (
-    <main>
-      <h1>Rodium CRM</h1>
-    </main>
+    <div>
+      <h1>
+        CRM
+      </h1>
+
+
+      <pre>
+        {JSON.stringify(
+          {
+            columns,
+            contacts,
+          },
+          null,
+          2,
+        )}
+      </pre>
+
+    </div>
   );
 }
+
 
 export default App;
