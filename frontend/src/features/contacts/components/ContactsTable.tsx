@@ -45,6 +45,7 @@ export function ContactsTable({
   // Mirrors `rows` so `handleUpdate` can read the latest state
   // synchronously without needing a side effect inside `setRows`.
   const rowsRef = useRef<Contact[]>(rows);
+
   useEffect(() => {
     rowsRef.current = rows;
   }, [rows]);
@@ -53,9 +54,13 @@ export function ContactsTable({
   // the server in order, rather than racing each other.
   const requestQueue = useRef<Record<number, Promise<void>>>({});
 
-  //We intentionally do this during render instead of useEffect so we avoid
-  //React's "setState inside effect" lint warning while preserving optimistic
-  //edits already stored in rows.
+  /*
+   * Synchronize newly fetched pages into local table state.
+   *
+   * We intentionally do this during render instead of useEffect so we avoid
+   * React's "setState inside effect" lint warning while preserving optimistic
+   * edits already stored in rows.
+   */
   if (contacts !== previousContacts) {
     setPreviousContacts(contacts);
 
@@ -80,6 +85,7 @@ export function ContactsTable({
     // commit (e.g. under StrictMode or concurrent rendering), and mutating
     // an outer variable from inside one is fragile.
     const existingRow = rowsRef.current.find((row) => row.id === id);
+
     const previousData: Partial<Contact> = existingRow
       ? diffPreviousData(existingRow, data)
       : {};
@@ -144,7 +150,9 @@ export function ContactsTable({
       );
 
       if (inFlightCount.current[id] === 0) {
-        setSavingIds((current) => current.filter((item) => item !== id));
+        setSavingIds((current) =>
+          current.filter((item) => item !== id),
+        );
       }
     }
   }
@@ -173,6 +181,43 @@ export function ContactsTable({
     return next;
   }
 
+  /*
+   * Infinite scrolling.
+   *
+   * Watches an invisible sentinel placed below the table.
+   * When it becomes visible we request the next page.
+   */
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+
+    if (!sentinel) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          entry.isIntersecting &&
+          hasMore &&
+          !loadingMore
+        ) {
+          loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: '200px',
+        threshold: 0,
+      },
+    );
+
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMore]);
+
   return (
     <div className="table-container">
       <table>
@@ -191,10 +236,34 @@ export function ContactsTable({
         </tbody>
       </table>
 
-      {hasMore && (
-        <button onClick={loadMore} disabled={loadingMore}>
-          {loadingMore ? 'Loading...' : 'Load more'}
-        </button>
+      {loadingMore && (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '1rem',
+          }}
+        >
+          Loading more contacts...
+        </div>
+      )}
+
+      <div
+        ref={sentinelRef}
+        style={{
+          height: 1,
+        }}
+      />
+
+      {!hasMore && (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '1rem',
+            color: '#666',
+          }}
+        >
+          All contacts loaded
+        </div>
       )}
     </div>
   );
