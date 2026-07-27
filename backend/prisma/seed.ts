@@ -1,4 +1,4 @@
-import { PrismaClient, ColumnType } from '../generated/prisma/client';
+import { PrismaClient, ColumnType } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
