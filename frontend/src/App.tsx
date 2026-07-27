@@ -6,6 +6,10 @@ import {
   useContacts,
 } from './features/contacts/hooks/useContacts';
 
+import {
+  ContactsTable,
+} from './features/contacts/components/ContactsTable';
+
 
 function App() {
 
@@ -25,27 +29,26 @@ function App() {
     columnsLoading ||
     contactsLoading
   ) {
-    return <div>Loading...</div>;
+    return (
+      <div>
+        Loading...
+      </div>
+    );
   }
 
 
   return (
     <div>
+
       <h1>
         CRM
       </h1>
 
 
-      <pre>
-        {JSON.stringify(
-          {
-            columns,
-            contacts,
-          },
-          null,
-          2,
-        )}
-      </pre>
+      <ContactsTable
+        columns={columns}
+        contacts={contacts}
+      />
 
     </div>
   );
