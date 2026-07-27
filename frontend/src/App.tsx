@@ -1,9 +1,11 @@
+import "./App.css";
+
 function App() {
   return (
-    <div>
-      Rodium CRM
-    </div>
-  )
+    <main>
+      <h1>Rodium CRM</h1>
+    </main>
+  );
 }
 
-export default App
+export default App;
