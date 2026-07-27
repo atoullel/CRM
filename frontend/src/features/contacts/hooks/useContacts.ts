@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { type Contact, getContacts } from '../api/contacts.api';
 
 const PAGE_SIZE = 50;
@@ -8,30 +8,21 @@ export function useContacts() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  const [error, setError] = useState<Error | null>(null);
+  const [loadMoreError, setLoadMoreError] = useState<Error | null>(null);
+
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
-  async function loadPage(pageNumber: number) {
-    const response = await getContacts(pageNumber, PAGE_SIZE);
-
-    setContacts((current) => {
-      const existingIds = new Set(current.map((contact) => contact.id));
-
-      const newContacts = response.data.filter(
-        (contact) => !existingIds.has(contact.id),
-      );
-
-      return [...current, ...newContacts];
-    });
-
-    setTotal(response.total);
-    setPage(response.page);
-  }
+  const isFetchingMoreRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function initialLoad() {
+      setLoading(true);
+      setError(null);
+
       try {
         const response = await getContacts(1, PAGE_SIZE);
 
@@ -40,6 +31,12 @@ export function useContacts() {
         setContacts(response.data);
         setTotal(response.total);
         setPage(response.page);
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err : new Error('Failed to load contacts'),
+          );
+        }
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -54,21 +51,42 @@ export function useContacts() {
     };
   }, []);
 
-  async function loadMore() {
-    if (loadingMore) return;
+  const loadMore = useCallback(async () => {
+    if (isFetchingMoreRef.current) return;
 
-    const hasMore = contacts.length < total;
+    const hasMoreNow = contacts.length < total;
+    if (!hasMoreNow) return;
 
-    if (!hasMore) return;
-
+    isFetchingMoreRef.current = true;
     setLoadingMore(true);
+    setLoadMoreError(null);
 
     try {
-      await loadPage(page + 1);
+      const response = await getContacts(page + 1, PAGE_SIZE);
+
+      setContacts((current) => {
+        const existingIds = new Set(current.map((contact) => contact.id));
+
+        const newContacts = response.data.filter(
+          (contact) => !existingIds.has(contact.id),
+        );
+
+        return [...current, ...newContacts];
+      });
+
+      setTotal(response.total);
+      setPage(response.page);
+    } catch (err) {
+      setLoadMoreError(
+        err instanceof Error
+          ? err
+          : new Error('Failed to load more contacts'),
+      );
     } finally {
+      isFetchingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }
+  }, [contacts.length, total, page]);
 
   return {
     contacts,
@@ -76,5 +94,7 @@ export function useContacts() {
     loadingMore,
     loadMore,
     hasMore: contacts.length < total,
+    error,
+    loadMoreError,
   };
 }
