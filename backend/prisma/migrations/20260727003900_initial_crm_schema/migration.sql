@@ -21,7 +21,6 @@ CREATE TABLE "contacts" (
     "telephone" TEXT,
     "date_joined" DATE,
     "score" INTEGER,
-    "custom_fields" JSONB NOT NULL DEFAULT '{}',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
