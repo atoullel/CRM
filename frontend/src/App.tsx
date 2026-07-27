@@ -4,17 +4,42 @@ import { ContactsTable } from './features/contacts/components/ContactsTable';
 
 function App() {
   const { columns, loading: columnsLoading } = useColumns();
-  const { contacts, loading: contactsLoading } = useContacts();
+
+  const {
+    contacts,
+    loading: contactsLoading,
+    loadMore,
+    loadingMore,
+    hasMore,
+    error,
+    loadMoreError,
+  } = useContacts();
 
   if (columnsLoading || contactsLoading) {
     return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Failed to load contacts. Please try refreshing the page.</div>;
   }
 
   return (
     <div>
       <h1>CRM</h1>
 
-      <ContactsTable columns={columns} contacts={contacts} />
+      {loadMoreError && (
+        <div role="alert">
+          Couldn't load more contacts. Please try again.
+        </div>
+      )}
+
+      <ContactsTable
+        columns={columns}
+        contacts={contacts}
+        loadMore={loadMore}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+      />
     </div>
   );
 }
