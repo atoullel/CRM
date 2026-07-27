@@ -4,7 +4,14 @@ import { ContactsTable } from './features/contacts/components/ContactsTable';
 
 function App() {
   const { columns, loading: columnsLoading } = useColumns();
-  const { contacts, loading: contactsLoading } = useContacts();
+
+  const {
+    contacts,
+    loading: contactsLoading,
+    loadMore,
+    loadingMore,
+    hasMore,
+  } = useContacts();
 
   if (columnsLoading || contactsLoading) {
     return <div>Loading...</div>;
@@ -14,7 +21,13 @@ function App() {
     <div>
       <h1>CRM</h1>
 
-      <ContactsTable columns={columns} contacts={contacts} />
+      <ContactsTable
+        columns={columns}
+        contacts={contacts}
+        loadMore={loadMore}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+      />
     </div>
   );
 }
