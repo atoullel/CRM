@@ -45,7 +45,15 @@ export function TableRow({ contact, columns, onUpdate, saving }: Props) {
       />
       <EditableCell
         value={contact.score}
-        onSave={(value) => onUpdate(contact.id, { score: Number(value) })}
+        onSave={(value) => {
+          const parsed = Number(value);
+
+          if (Number.isNaN(parsed)) {
+            return;
+          }
+
+          onUpdate(contact.id, { score: parsed });
+        }}
       />
       {columns.map((column) => (
         <EditableCell

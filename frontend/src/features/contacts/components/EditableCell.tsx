@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface Props {
   value: string | number | null | undefined;
@@ -6,22 +6,45 @@ interface Props {
   displayValue?: string | number | null | undefined;
 }
 
-export function EditableCell({ value, onSave, displayValue }: Props) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value?.toString() ?? '');
-  const [syncedValue, setSyncedValue] = useState(value);
+export function EditableCell({
+  value,
+  onSave,
+  displayValue,
+}: Props) {
+  const normalizedValue = value?.toString() ?? '';
 
-  if (!editing && value !== syncedValue) {
-    setSyncedValue(value);
-    setDraft(value?.toString() ?? '');
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(normalizedValue);
+  const [lastValue, setLastValue] = useState(normalizedValue);
+
+  useEffect(() => {
+    if (normalizedValue !== lastValue) {
+      setLastValue(normalizedValue);
+
+      if (!editing) {
+        setDraft(normalizedValue);
+      }
+    }
+  }, [normalizedValue, lastValue, editing]);
+
+  function startEditing() {
+    setDraft(normalizedValue);
+    setEditing(true);
   }
 
   function save() {
-    setEditing(false);
-
-    if (draft !== (value?.toString() ?? '')) {
-      onSave(draft);
+    if (draft === normalizedValue) {
+      setEditing(false);
+      return;
     }
+
+    setEditing(false);
+    onSave(draft);
+  }
+
+  function cancel() {
+    setDraft(normalizedValue);
+    setEditing(false);
   }
 
   if (editing) {
@@ -36,11 +59,19 @@ export function EditableCell({ value, onSave, displayValue }: Props) {
             if (event.key === 'Enter') {
               save();
             }
+
+            if (event.key === 'Escape') {
+              cancel();
+            }
           }}
         />
       </td>
     );
   }
 
-  return <td onDoubleClick={() => setEditing(true)}>{displayValue ?? value}</td>;
+  return (
+    <td onDoubleClick={startEditing}>
+      {displayValue ?? value}
+    </td>
+  );
 }

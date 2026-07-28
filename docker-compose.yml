@@ -47,8 +47,6 @@ services:
       context: ./frontend
     container_name: rodium-frontend
     restart: unless-stopped
-    environment:
-      VITE_BACKEND_URL: http://localhost:3000/api
     ports:
       - "5173:5173"
     volumes:

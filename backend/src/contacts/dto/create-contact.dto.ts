@@ -4,10 +4,14 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  MinLength,
+  IsPhoneNumber,
+  Min,
 } from 'class-validator';
 
 export class CreateContactDto {
   @IsString()
+  @MinLength(1)
   nom: string;
 
   @IsOptional()
@@ -15,7 +19,7 @@ export class CreateContactDto {
   entreprise?: string;
 
   @IsOptional()
-  @IsString()
+  @IsPhoneNumber(undefined)
   telephone?: string;
 
   @IsOptional()
@@ -24,6 +28,7 @@ export class CreateContactDto {
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   score?: number;
 
   @IsOptional()
