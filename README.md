@@ -66,9 +66,15 @@ Cette organisation permet de garder les fonctionnalités isolées et facilite l'
 
 ## Démarrage
 
-Depuis la racine du projet :
+Depuis le backend du projet (pour un clone neuf du projet) :
 
-Voir .env.example pour initialiser .env
+Voir .env.example pour initialiser .env à la racine, dans le backend et dans le frontend
+
+```bash
+npm install
+```
+
+Depuis la racine du projet :
 
 ```bash
 docker compose up --build
