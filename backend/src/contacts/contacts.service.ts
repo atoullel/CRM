@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { ColumnType } from '@prisma/client';
+
 import { PrismaService } from '../prisma/prisma.service';
 
 import { CreateContactDto } from './dto/create-contact.dto';
@@ -11,6 +13,14 @@ import { UpdateContactDto } from './dto/update-contact.dto';
 import { PaginationQueryDto } from './dto/pagination-query.dto';
 
 import { CURRENT_ORGANIZATION_ID } from '../common/constants/organization.constant';
+
+import {
+  isValidNumber,
+  isValidPhone,
+  isValidText,
+  isValidInteger,
+  parseDate,
+} from '../common/validators/field-value.validator';
 
 @Injectable()
 export class ContactsService {
@@ -24,7 +34,6 @@ export class ContactsService {
       deletedAt: null,
     };
 
-    // Run in parallel via $transaction instead of two sequential round-trips.
     const [contacts, total] = await this.prisma.$transaction([
       this.prisma.contact.findMany({
         where,
@@ -37,25 +46,7 @@ export class ContactsService {
     ]);
 
     return {
-      data: contacts.map((contact) => {
-        const dynamicValues = contact.values.reduce(
-          (acc, item) => {
-            acc[item.columnId] = item.value;
-            return acc;
-          },
-          {} as Record<string, string>,
-        );
-
-        return {
-          id: contact.id,
-          nom: contact.nom,
-          entreprise: contact.entreprise,
-          telephone: contact.telephone,
-          dateJoined: contact.dateJoined,
-          score: contact.score,
-          dynamicValues,
-        };
-      }),
+      data: contacts.map((contact) => this.formatContact(contact)),
       total,
       page,
       pageSize,
@@ -82,11 +73,16 @@ export class ContactsService {
   async create(dto: CreateContactDto) {
     const { dynamicValues, dateJoined, ...contactData } = dto;
 
+    this.validateFixedFields(contactData, dateJoined);
+
+    await this.validateDynamicValues(dynamicValues);
+
     return this.prisma.contact.create({
       data: {
         organizationId: CURRENT_ORGANIZATION_ID,
         ...contactData,
-        dateJoined: this.parseDate(dateJoined),
+        dateJoined: dateJoined ? parseDate(dateJoined) : undefined,
+
         values: dynamicValues
           ? {
               create: Object.entries(dynamicValues).map(
@@ -98,7 +94,9 @@ export class ContactsService {
             }
           : undefined,
       },
-      include: { values: true },
+      include: {
+        values: true,
+      },
     });
   }
 
@@ -117,11 +115,13 @@ export class ContactsService {
 
     const { dynamicValues, dateJoined, ...contactData } = dto;
 
-    const parsedDateJoined =
-      dateJoined !== undefined ? this.parseDate(dateJoined) : undefined;
+    this.validateFixedFields(contactData, dateJoined);
 
-    // Single transaction: contact update + all dynamicValue upserts either
-    // all succeed or all roll back. Also runs concurrently
+    await this.validateDynamicValues(dynamicValues);
+
+    const parsedDateJoined =
+      dateJoined !== undefined ? parseDate(dateJoined) : undefined;
+
     await this.prisma.$transaction([
       this.prisma.contact.update({
         where: { id },
@@ -132,6 +132,7 @@ export class ContactsService {
           }),
         },
       }),
+
       ...Object.entries(dynamicValues ?? {}).map(([columnId, value]) =>
         this.prisma.contactValue.upsert({
           where: {
@@ -140,7 +141,9 @@ export class ContactsService {
               columnId: Number(columnId),
             },
           },
-          update: { value },
+          update: {
+            value,
+          },
           create: {
             contactId: id,
             columnId: Number(columnId),
@@ -168,37 +171,110 @@ export class ContactsService {
 
     return this.prisma.contact.update({
       where: { id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+      },
     });
   }
 
-  // Re-validates the ISO date string as a real Date. IsDateString on the
-  // DTO checks the string *format*; this catches anything that's
-  // syntactically ISO-ish but not an actual calendar date, and converts
-  // to the Date instance Prisma expects.
-  private parseDate(dateJoined?: string): Date | undefined {
-    if (dateJoined === undefined) {
-      return undefined;
+  private async validateDynamicValues(
+    dynamicValues?: Record<string, string>,
+  ): Promise<void> {
+    if (!dynamicValues || Object.keys(dynamicValues).length === 0) {
+      return;
     }
 
-    const parsed = new Date(dateJoined);
+    const columnIds = Object.keys(dynamicValues).map(Number);
 
-    if (isNaN(parsed.getTime())) {
-      throw new BadRequestException('dateJoined must be a valid date');
+    const columns = await this.prisma.column.findMany({
+      where: {
+        id: {
+          in: columnIds,
+        },
+        organizationId: CURRENT_ORGANIZATION_ID,
+        deletedAt: null,
+      },
+    });
+
+    const columnMap = new Map(columns.map((column) => [column.id, column]));
+
+    for (const [columnId, value] of Object.entries(dynamicValues)) {
+      const column = columnMap.get(Number(columnId));
+
+      if (!column) {
+        throw new BadRequestException(`Column ${columnId} does not exist`);
+      }
+
+      this.assertValueMatchesType(column.type, value, column.name);
+    }
+  }
+
+  private validateFixedFields(
+    data: Partial<CreateContactDto>,
+    dateJoined?: string,
+  ) {
+    if (data.nom !== undefined && !isValidText(data.nom)) {
+      throw new BadRequestException('nom cannot be empty');
     }
 
-    return parsed;
+    if (data.entreprise !== undefined && !isValidText(data.entreprise)) {
+      throw new BadRequestException('entreprise cannot be empty');
+    }
+
+    if (data.telephone !== undefined && !isValidPhone(data.telephone)) {
+      throw new BadRequestException('telephone must be a valid phone number');
+    }
+
+    if (dateJoined !== undefined) {
+      parseDate(dateJoined);
+    }
+
+    if (data.score !== undefined && !isValidInteger(data.score)) {
+      throw new BadRequestException('score must be an integer');
+    }
+  }
+
+  private assertValueMatchesType(
+    type: ColumnType,
+    value: string,
+    fieldName: string,
+  ) {
+    switch (type) {
+      case ColumnType.NUMBER:
+        if (!isValidNumber(value)) {
+          throw new BadRequestException(`${fieldName} must be a number`);
+        }
+        break;
+
+      case ColumnType.DATE:
+        parseDate(value, fieldName);
+        break;
+
+      case ColumnType.PHONE:
+        if (!isValidPhone(value)) {
+          throw new BadRequestException(
+            `${fieldName} must be a valid phone number`,
+          );
+        }
+        break;
+
+      case ColumnType.TEXT:
+        if (!isValidText(value)) {
+          throw new BadRequestException(`${fieldName} cannot be empty`);
+        }
+        break;
+    }
   }
 
   private formatContact(contact: any) {
     const dynamicValues = contact.values.reduce(
       (acc, item) => {
         acc[item.columnId] = item.value;
-
         return acc;
       },
       {} as Record<string, string>,
     );
+
     return {
       id: contact.id,
       nom: contact.nom,
